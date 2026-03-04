@@ -30,8 +30,8 @@
         var(--bg);
       padding:56px 18px;
     }
-
     .wrap{max-width:980px;margin:0 auto}
+
     .nav{
       display:flex;
       justify-content:space-between;
@@ -40,7 +40,6 @@
       flex-wrap:wrap;
       margin-bottom:22px;
     }
-
     .brand{
       display:flex;
       align-items:center;
@@ -49,21 +48,16 @@
       letter-spacing:.2px;
       min-width:220px;
     }
-
-    /* LOGO FIX: predictable sizing + cache-bust via querystring in HTML */
     .brand img{
-      width:26px;
-      height:26px;
+      width:26px;height:26px;
       object-fit:contain;
       display:block;
-      image-rendering:auto;
     }
     .dot{
       width:10px;height:10px;border-radius:99px;
       background:linear-gradient(135deg,var(--accent),var(--accent2));
       display:inline-block;
     }
-
     .note{color:var(--muted2);font-size:13px}
     .navlinks{display:flex;gap:12px;flex-wrap:wrap}
     .navlinks a{
@@ -116,7 +110,7 @@
     .btn:hover{transform:translateY(-1px)}
     .btn:active{transform:translateY(0px)}
 
-    /* KPI pills become anchors */
+    /* Pills are anchors */
     .kpi{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
     .pilllink{
       font-size:12px;
@@ -135,6 +129,10 @@
       transform:translateY(-1px);
     }
     .pilllink:active{transform:translateY(0px)}
+    .pilllink.active{
+      border-color: rgba(42,167,255,.65);
+      background: rgba(42,167,255,.12);
+    }
 
     ul{margin:0;padding-left:18px;color:var(--muted)}
     li{margin:7px 0}
@@ -152,21 +150,28 @@
       font-size:13px;
       max-width:82ch;
     }
-
     .mono{
       font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       font-size:12px;
       color:rgba(234,240,255,.70);
     }
-
     .footer{margin-top:22px;color:rgba(234,240,255,.55);font-size:12px}
 
-    /* anchor highlight */
+    /* Scroll offset for anchor targets */
+    #overview, #downloads, #contact,
+    #pseudonym, #drivers, #confidence, #whatif, #metrics{
+      scroll-margin-top: 18px;
+    }
+
+    /* TARGET HIGHLIGHT: colored section highlight */
     #overview:target, #downloads:target, #contact:target,
     #pseudonym:target, #drivers:target, #confidence:target, #whatif:target, #metrics:target{
-      outline:2px solid rgba(42,167,255,.55);
+      border:1px solid rgba(42,167,255,.55);
+      background:
+        radial-gradient(700px 180px at 20% 0%, rgba(42,167,255,.18), transparent 60%),
+        radial-gradient(600px 180px at 80% 0%, rgba(0,224,184,.12), transparent 60%),
+        rgba(255,255,255,.03);
       box-shadow: 0 0 0 6px rgba(42,167,255,.10);
-      border-radius:18px;
     }
   </style>
 
@@ -178,6 +183,27 @@
       const el = document.querySelector(hash);
       if (el) setTimeout(() => el.scrollIntoView({behavior:'smooth', block:'start'}), 80);
     });
+
+    function syncPrimaryCTA() {
+      const btn = document.getElementById('btnOverview');
+      if (!btn) return;
+      btn.classList.toggle('primary', window.location.hash === '#overview');
+    }
+
+    function syncActivePill() {
+      const hash = window.location.hash;
+      document.querySelectorAll('.pilllink').forEach(a => {
+        a.classList.toggle('active', a.getAttribute('href') === hash);
+      });
+    }
+
+    function syncUIState() {
+      syncPrimaryCTA();
+      syncActivePill();
+    }
+
+    window.addEventListener('DOMContentLoaded', syncUIState);
+    window.addEventListener('hashchange', syncUIState);
   </script>
 </head>
 
@@ -185,8 +211,8 @@
   <div class="wrap">
     <div class="nav">
       <div class="brand">
-        <!-- LOGO FIX: cache-bust + stable fallback -->
-        <img src="./logo.png?v=1" alt="PersonaQuanta"
+        <!-- Logo fix: cache-bust + stable fallback -->
+        <img src="./logo.png?v=2" alt="PersonaQuanta"
           onerror="this.style.display='none'; this.nextElementSibling.style.display='inline-block';" />
         <span class="dot" style="display:none"></span>
         PersonaQuanta
@@ -213,7 +239,8 @@
         </p>
 
         <div class="cta">
-          <a class="btn primary" href="#overview">View executive overview</a>
+          <!-- NOT always highlighted: primary toggles only when hash == #overview -->
+          <a class="btn" id="btnOverview" href="#overview">View executive overview</a>
 
           <a class="btn" href="mailto:personaquanta@proton.me?subject=PersonaQuanta%20%E2%80%94%20NDA%20Request&body=Hi%2C%0A%0AI%27d%20like%20to%20review%20PersonaQuanta%20under%20NDA.%0A%0ACompany%3A%0ARole%3A%0ACountry%3A%0AUse%20case%3A%0A%0AThanks.">
             Request NDA
@@ -224,7 +251,7 @@
           </a>
         </div>
 
-        <!-- KPI pills are now anchors -->
+        <!-- Pills are now anchors, and section will highlight via :target -->
         <div class="kpi" aria-label="Key capabilities">
           <a class="pilllink" href="#pseudonym">Pseudonym-first</a>
           <a class="pilllink" href="#drivers">Explainable “Top Drivers”</a>
@@ -276,6 +303,7 @@
 
     <section class="card" id="overview">
       <h2>Executive overview</h2>
+
       <p class="tag" style="margin-bottom:10px;max-width:82ch">
         PersonaQuanta is an <b>explainable self-model</b> experience for users:
         it converts inputs into drivers, trade-offs, and trajectory — built to give users a reason to finish the flow.
@@ -344,7 +372,7 @@
         <li><b>Summary</b>: exportable report format (template)</li>
       </ol>
 
-      <p class="small">Downloads below include the executive overview, full pilot offer, and a sample report format.</p>
+      <p class="small">Downloads include the executive overview, full pilot offer, and a sample report format.</p>
     </section>
 
     <div class="grid">
