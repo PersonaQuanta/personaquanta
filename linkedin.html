@@ -1,0 +1,327 @@
+import { useState, useCallback, useMemo } from "react";
+import Papa from "papaparse";
+
+const LINKEDIN_FIELDS = {
+  "First Name": "firstName",
+  "Last Name": "lastName",
+  "Email Address": "email",
+  "Company": "company",
+  "Position": "position",
+  "Connected On": "connectedOn",
+  "URL": "url",
+};
+
+const SORT_OPTIONS = [
+  { label: "Ім'я", value: "firstName" },
+  { label: "Прізвище", value: "lastName" },
+  { label: "Компанія", value: "company" },
+  { label: "Посада", value: "position" },
+  { label: "Дата з'єднання", value: "connectedOn" },
+];
+
+function parseDate(str) {
+  if (!str) return new Date(0);
+  const d = new Date(str);
+  return isNaN(d) ? new Date(0) : d;
+}
+
+export default function App() {
+  const [contacts, setContacts] = useState([]);
+  const [sortField, setSortField] = useState("firstName");
+  const [sortDir, setSortDir] = useState("asc");
+  const [search, setSearch] = useState("");
+  const [dragging, setDragging] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [error, setError] = useState("");
+
+  const handleFile = useCallback((file) => {
+    if (!file || !file.name.endsWith(".csv")) {
+      setError("Завантажте файл у форматі .csv");
+      return;
+    }
+    setError("");
+    setFileName(file.name);
+    Papa.parse(file, {
+      header: true,
+      skipEmptyLines: true,
+      complete: (result) => {
+        const mapped = result.data.map((row) => {
+          const c = {};
+          Object.entries(LINKEDIN_FIELDS).forEach(([csvKey, key]) => {
+            c[key] = row[csvKey] || row[csvKey.toLowerCase()] || "";
+          });
+          return c;
+        });
+        setContacts(mapped);
+      },
+      error: () => setError("Помилка читання файлу"),
+    });
+  }, []);
+
+  const onDrop = useCallback((e) => {
+    e.preventDefault();
+    setDragging(false);
+    handleFile(e.dataTransfer.files[0]);
+  }, [handleFile]);
+
+  const onInputChange = (e) => handleFile(e.target.files[0]);
+
+  const handleSort = (field) => {
+    if (sortField === field) setSortDir(d => d === "asc" ? "desc" : "asc");
+    else { setSortField(field); setSortDir("asc"); }
+  };
+
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase();
+    return contacts.filter(c =>
+      Object.values(c).some(v => v.toLowerCase().includes(q))
+    );
+  }, [contacts, search]);
+
+  const sorted = useMemo(() => {
+    return [...filtered].sort((a, b) => {
+      const va = sortField === "connectedOn" ? parseDate(a[sortField]) : (a[sortField] || "").toLowerCase();
+      const vb = sortField === "connectedOn" ? parseDate(b[sortField]) : (b[sortField] || "").toLowerCase();
+      if (va < vb) return sortDir === "asc" ? -1 : 1;
+      if (va > vb) return sortDir === "asc" ? 1 : -1;
+      return 0;
+    });
+  }, [filtered, sortField, sortDir]);
+
+  const exportCSV = () => {
+    const csv = Papa.unparse(sorted.map(c => ({
+      "First Name": c.firstName,
+      "Last Name": c.lastName,
+      "Email Address": c.email,
+      "Company": c.company,
+      "Position": c.position,
+      "Connected On": c.connectedOn,
+      "URL": c.url,
+    })));
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url; a.download = "linkedin_sorted.csv"; a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const SortIcon = ({ field }) => {
+    if (sortField !== field) return <span style={{opacity:0.3}}>↕</span>;
+    return <span>{sortDir === "asc" ? "↑" : "↓"}</span>;
+  };
+
+  return (
+    <div style={{
+      minHeight: "100vh",
+      background: "#0a0f1e",
+      fontFamily: "'IBM Plex Mono', monospace",
+      color: "#e2e8f0",
+      padding: "0",
+    }}>
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@300;400;500;600&family=Space+Grotesk:wght@400;600;700&display=swap');
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #0a0f1e; }
+        ::-webkit-scrollbar-thumb { background: #0077b5; border-radius: 3px; }
+        .header-cell { cursor: pointer; user-select: none; white-space: nowrap; }
+        .header-cell:hover { color: #38bdf8; }
+        .row-hover:hover { background: rgba(0,119,181,0.08) !important; }
+        .btn { transition: all 0.15s; cursor: pointer; }
+        .btn:hover { filter: brightness(1.15); transform: translateY(-1px); }
+        .drop-zone { transition: all 0.2s; }
+        .tag { display: inline-block; background: rgba(0,119,181,0.18); color: #38bdf8; border: 1px solid rgba(56,189,248,0.3); border-radius: 4px; padding: 2px 8px; font-size: 11px; }
+        input[type=text] { outline: none; }
+        input[type=text]:focus { border-color: #0077b5 !important; box-shadow: 0 0 0 2px rgba(0,119,181,0.25); }
+        @keyframes fadeIn { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:translateY(0); } }
+        .fade-in { animation: fadeIn 0.4s ease forwards; }
+        .grid-bg {
+          position: fixed; top:0; left:0; width:100%; height:100%; pointer-events:none; z-index:0;
+          background-image: linear-gradient(rgba(0,119,181,0.04) 1px, transparent 1px),
+            linear-gradient(90deg, rgba(0,119,181,0.04) 1px, transparent 1px);
+          background-size: 40px 40px;
+        }
+      `}</style>
+
+      <div className="grid-bg" />
+
+      <div style={{ position: "relative", zIndex: 1 }}>
+        {/* Header */}
+        <div style={{
+          borderBottom: "1px solid rgba(0,119,181,0.3)",
+          padding: "24px 40px",
+          display: "flex", alignItems: "center", gap: "16px",
+          background: "rgba(0,119,181,0.04)",
+          backdropFilter: "blur(10px)",
+        }}>
+          <div style={{
+            width: 36, height: 36, borderRadius: "8px",
+            background: "linear-gradient(135deg, #0077b5, #38bdf8)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 18, fontWeight: 700, color: "#fff",
+            fontFamily: "'Space Grotesk', sans-serif",
+          }}>in</div>
+          <div>
+            <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 18, fontWeight: 700, letterSpacing: "-0.5px" }}>
+              LinkedIn Contact Organizer
+            </div>
+            <div style={{ fontSize: 11, color: "#64748b", marginTop: 2 }}>
+              Завантажте експорт з LinkedIn · Сортуйте · Фільтруйте
+            </div>
+          </div>
+          {contacts.length > 0 && (
+            <div style={{ marginLeft: "auto", display: "flex", gap: 10, alignItems: "center" }}>
+              <span className="tag">{contacts.length} контактів</span>
+              <button className="btn" onClick={exportCSV} style={{
+                background: "linear-gradient(135deg, #0077b5, #005582)",
+                border: "none", borderRadius: 8, padding: "8px 18px",
+                color: "#fff", fontSize: 12, fontFamily: "'IBM Plex Mono', monospace",
+                fontWeight: 500, letterSpacing: "0.5px",
+              }}>
+                ↓ Експорт CSV
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div style={{ padding: "32px 40px" }}>
+
+          {/* Drop Zone */}
+          {contacts.length === 0 && (
+            <div
+              className="drop-zone fade-in"
+              onDragOver={(e) => { e.preventDefault(); setDragging(true); }}
+              onDragLeave={() => setDragging(false)}
+              onDrop={onDrop}
+              onClick={() => document.getElementById("csv-input").click()}
+              style={{
+                border: `2px dashed ${dragging ? "#38bdf8" : "rgba(0,119,181,0.4)"}`,
+                borderRadius: 16,
+                padding: "64px 40px",
+                textAlign: "center",
+                cursor: "pointer",
+                background: dragging ? "rgba(0,119,181,0.08)" : "rgba(0,119,181,0.02)",
+                maxWidth: 560, margin: "0 auto",
+              }}
+            >
+              <input id="csv-input" type="file" accept=".csv" style={{ display: "none" }} onChange={onInputChange} />
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+              <div style={{ fontFamily: "'Space Grotesk', sans-serif", fontSize: 20, fontWeight: 600, marginBottom: 8 }}>
+                Завантажте contacts.csv
+              </div>
+              <div style={{ fontSize: 12, color: "#64748b", lineHeight: 1.7 }}>
+                Перетягніть файл сюди або натисніть для вибору<br />
+                <span style={{ color: "#38bdf8" }}>Settings → Data Privacy → Get a copy of your data</span> у LinkedIn
+              </div>
+              {error && <div style={{ color: "#f87171", fontSize: 12, marginTop: 16 }}>{error}</div>}
+            </div>
+          )}
+
+          {/* Table */}
+          {contacts.length > 0 && (
+            <div className="fade-in">
+              {/* Controls */}
+              <div style={{ display: "flex", gap: 12, marginBottom: 20, alignItems: "center", flexWrap: "wrap" }}>
+                <input
+                  type="text"
+                  placeholder="🔍  Пошук..."
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  style={{
+                    background: "rgba(255,255,255,0.04)",
+                    border: "1px solid rgba(0,119,181,0.3)",
+                    borderRadius: 8, padding: "8px 14px",
+                    color: "#e2e8f0", fontSize: 13,
+                    fontFamily: "'IBM Plex Mono', monospace",
+                    width: 260,
+                    transition: "all 0.2s",
+                  }}
+                />
+                <div style={{ marginLeft: "auto", fontSize: 12, color: "#64748b" }}>
+                  Показано: <span style={{ color: "#38bdf8" }}>{sorted.length}</span> / {contacts.length}
+                </div>
+                <button className="btn" onClick={() => { setContacts([]); setFileName(""); setSearch(""); }} style={{
+                  background: "transparent", border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: 8, padding: "8px 14px", color: "#94a3b8",
+                  fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer",
+                }}>
+                  ✕ Скинути
+                </button>
+              </div>
+
+              {/* Sort pills */}
+              <div style={{ display: "flex", gap: 8, marginBottom: 16, flexWrap: "wrap" }}>
+                {SORT_OPTIONS.map(opt => (
+                  <button key={opt.value} className="btn" onClick={() => handleSort(opt.value)} style={{
+                    background: sortField === opt.value ? "rgba(0,119,181,0.25)" : "rgba(255,255,255,0.04)",
+                    border: `1px solid ${sortField === opt.value ? "rgba(56,189,248,0.5)" : "rgba(255,255,255,0.08)"}`,
+                    borderRadius: 20, padding: "5px 14px",
+                    color: sortField === opt.value ? "#38bdf8" : "#94a3b8",
+                    fontSize: 12, fontFamily: "'IBM Plex Mono', monospace", cursor: "pointer",
+                  }}>
+                    {opt.label} {sortField === opt.value ? (sortDir === "asc" ? "↑" : "↓") : ""}
+                  </button>
+                ))}
+              </div>
+
+              {/* Table */}
+              <div style={{ overflowX: "auto", borderRadius: 12, border: "1px solid rgba(0,119,181,0.2)" }}>
+                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: "rgba(0,119,181,0.12)", borderBottom: "1px solid rgba(0,119,181,0.2)" }}>
+                      {[
+                        { label: "Ім'я", field: "firstName" },
+                        { label: "Прізвище", field: "lastName" },
+                        { label: "Email", field: "email" },
+                        { label: "Компанія", field: "company" },
+                        { label: "Посада", field: "position" },
+                        { label: "З'єднані", field: "connectedOn" },
+                        { label: "Профіль", field: null },
+                      ].map(col => (
+                        <th key={col.label}
+                          className={col.field ? "header-cell" : ""}
+                          onClick={() => col.field && handleSort(col.field)}
+                          style={{
+                            padding: "12px 16px", textAlign: "left",
+                            color: sortField === col.field ? "#38bdf8" : "#94a3b8",
+                            fontWeight: 500, fontSize: 11, letterSpacing: "0.8px",
+                            textTransform: "uppercase",
+                          }}>
+                          {col.label} {col.field && <SortIcon field={col.field} />}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sorted.map((c, i) => (
+                      <tr key={i} className="row-hover" style={{
+                        borderBottom: "1px solid rgba(255,255,255,0.04)",
+                        background: i % 2 === 0 ? "rgba(255,255,255,0.01)" : "transparent",
+                      }}>
+                        <td style={{ padding: "10px 16px", color: "#e2e8f0" }}>{c.firstName}</td>
+                        <td style={{ padding: "10px 16px", color: "#e2e8f0", fontWeight: 500 }}>{c.lastName}</td>
+                        <td style={{ padding: "10px 16px", color: "#64748b", fontSize: 12 }}>{c.email}</td>
+                        <td style={{ padding: "10px 16px" }}>
+                          {c.company && <span className="tag">{c.company}</span>}
+                        </td>
+                        <td style={{ padding: "10px 16px", color: "#94a3b8", fontSize: 12 }}>{c.position}</td>
+                        <td style={{ padding: "10px 16px", color: "#64748b", fontSize: 11 }}>{c.connectedOn}</td>
+                        <td style={{ padding: "10px 16px" }}>
+                          {c.url && (
+                            <a href={c.url} target="_blank" rel="noopener noreferrer" style={{
+                              color: "#0077b5", textDecoration: "none", fontSize: 12,
+                            }}>→ in</a>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
