@@ -175,8 +175,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
   <div class="logo">PersonaQuanta <span>·</span> CRM</div>
   <div class="topbar-meta">INVESTOR OUTREACH · 2026</div>
   <div class="topbar-right">
-    <button class="tbtn" onclick="openConfig()">⚙ Settings</button>
-    <button class="tbtn primary" onclick="showPastePanel()">+ New Contact</button>
+    <button class="tbtn" id="btn-cfg">⚙ Settings</button>
+    <button class="tbtn primary" id="btn-new">+ New Contact</button>
   </div>
 </div>
 
@@ -225,6 +225,8 @@ body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(
 <div class="toast" id="toast" style="opacity:0"></div>
 
 <script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+(function(){
+window._crm={};
 const ST={new:{l:'New',c:'b-new'},sent:{l:'Sent',c:'b-sent'},replied:{l:'Replied',c:'b-replied'},hot:{l:'🔥 Hot',c:'b-hot'},declined:{l:'Declined',c:'b-declined'},followup:{l:'Follow-up',c:'b-followup'},closed:{l:'Closed',c:'b-closed'}};
 
 // Seed data — existing contacts
@@ -241,25 +243,25 @@ const SEED=[
 
 let contacts=[], activeFilter='all', selectedId=null, currentDraft=null;
 
-function load(){const s=localStorage.getItem('pq_crm5');contacts=s?JSON.parse(s):SEED.map((c,i)=>({...c,id:Date.now()+i,log:c.log||[]}));renderAll()}
-function save(){localStorage.setItem('pq_crm5',JSON.stringify(contacts))}
-function getFiltered(){const q=document.getElementById('search').value.toLowerCase();return contacts.filter(c=>{if(activeFilter!=='all'&&c.st!==activeFilter)return false;if(q&&!`${c.n} ${c.co} ${c.nt} ${c.em}`.toLowerCase().includes(q))return false;return true})}
-function setFilter(f){activeFilter=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));const b=document.getElementById(`fb-${f}`);if(b)b.classList.add('active');renderList()}
-function renderAll(){updateStats();renderList()}
-function updateStats(){
+window.load = function load(){const s=localStorage.getItem('pq_crm5');contacts=s?JSON.parse(s):SEED.map((c,i)=>({...c,id:Date.now()+i,log:c.log||[]}));renderAll()}
+window.save = function save(){localStorage.setItem('pq_crm5',JSON.stringify(contacts))}
+window.getFiltered = function getFiltered(){const q=document.getElementById('search').value.toLowerCase();return contacts.filter(c=>{if(activeFilter!=='all'&&c.st!==activeFilter)return false;if(q&&!`${c.n} ${c.co} ${c.nt} ${c.em}`.toLowerCase().includes(q))return false;return true})}
+window.setFilter = function setFilter(f){activeFilter=f;document.querySelectorAll('.fb').forEach(b=>b.classList.remove('active'));const b=document.getElementById(`fb-${f}`);if(b)b.classList.add('active');renderList()}
+window.renderAll = function renderAll(){updateStats();renderList()}
+window.updateStats = function updateStats(){
   document.getElementById('s-total').textContent=contacts.length;
   document.getElementById('s-hot').textContent=contacts.filter(c=>c.st==='hot').length;
   document.getElementById('s-replied').textContent=contacts.filter(c=>c.st==='replied').length;
   document.getElementById('s-fw').textContent=contacts.filter(c=>c.st==='followup').length;
   ['all','hot','sent','replied','followup','declined'].forEach(f=>{const e=document.getElementById(`fc-${f}`);if(e)e.textContent=f==='all'?contacts.length:contacts.filter(c=>c.st===f).length});
 }
-function renderList(){
+window.renderList = function renderList(){
   updateStats();
   document.getElementById('clist').innerHTML=getFiltered().map(c=>{const s=ST[c.st]||ST.sent;return`<div class="ci${c.id===selectedId?' sel':''}" onclick="selContact(${c.id})"><div class="ci-name">${c.n}${c.fit?` <span style="font-size:9px;color:var(--muted2)">${c.fit}</span>`:''}</div><div class="ci-co">${c.co||'—'}</div><div class="ci-bot"><span class="badge ${s.c}">${s.l}</span><span class="ci-date">${c.dt||''}</span></div></div>`}).join('')
 }
 
 // ── PASTE PANEL ──────────────────────────────────────────────────────────────
-function showPastePanel(){
+window.showPastePanel = function showPastePanel(){
   selectedId=null;renderList();
   document.getElementById('main').innerHTML=`
   <div class="paste-panel">
@@ -275,7 +277,7 @@ function showPastePanel(){
   </div>`;
 }
 
-async function analyzeProfile(){
+async window.analyzeProfile = function analyzeProfile(){
   const ck=localStorage.getItem('pq_claude');
   if(!ck){toast('Add Anthropic API key in Settings first','error');openConfig();return}
   const txt=document.getElementById('profile-paste').value.trim();
@@ -355,7 +357,7 @@ Return ONLY valid JSON (no markdown):
   }
 }
 
-function showResults(p){
+window.showResults = function showResults(p){
   const dmLen=p.dm?p.dm.length:0;
   const dmColor=dmLen<=280?'char-ok':dmLen<=300?'char-warn':'char-over';
   document.getElementById('main').innerHTML=`
@@ -410,7 +412,7 @@ function showResults(p){
   updateCharCount();
 }
 
-function dmTabHtml(p){
+window.dmTabHtml = function dmTabHtml(p){
   const dmLen=(p||currentDraft||{}).dm?.length||0;
   const dm=(p||currentDraft||{}).dm||'';
   const col=dmLen<=280?'var(--accent2)':dmLen<=300?'var(--accent3)':'var(--red)';
@@ -424,14 +426,14 @@ function dmTabHtml(p){
   </div>`;
 }
 
-function emailTabHtml(p){
+window.emailTabHtml = function emailTabHtml(p){
   const d=p||currentDraft||{};
   return`<div class="mf"><label>TO</label><input id="email-to" value="${d.email||''}" placeholder="recipient@email.com"></div>
   <div class="mf"><label>SUBJECT</label><input id="email-subj" value="${d.email_subject||''}"></div>
   <div class="mf"><label>BODY</label><textarea id="email-body" rows="12" style="min-height:180px">${d.email_body||''}</textarea></div>`;
 }
 
-function swMsgTab(tab){
+window.swMsgTab = function swMsgTab(tab){
   ['dm','email'].forEach(t=>{const e=document.getElementById(`mt-${t}`);if(e)e.classList.toggle('active',t===tab)});
   const mc=document.getElementById('msg-content');if(!mc)return;
   const bsdm=document.getElementById('bsdm');
@@ -448,7 +450,7 @@ function swMsgTab(tab){
   }
 }
 
-function updateCharCount(){
+window.updateCharCount = function updateCharCount(){
   const ta=document.getElementById('dm-text');
   const cc=document.getElementById('char-count');
   if(!ta||!cc)return;
@@ -458,7 +460,7 @@ function updateCharCount(){
   cc.style.color=col;
 }
 
-function copyDM(){
+window.copyDM = function copyDM(){
   const ta=document.getElementById('dm-text');
   if(!ta)return;
   if(ta.value.length>300){toast(`DM is ${ta.value.length} chars — trim to 300 first`,'error');return}
@@ -469,7 +471,7 @@ function copyDM(){
   });
 }
 
-async function sendEmail(){
+async window.sendEmail = function sendEmail(){
   const rk=localStorage.getItem('pq_resend');
   if(!rk){toast('Add Resend API key in Settings','error');openConfig();return}
   // Check which tab is active
@@ -496,7 +498,7 @@ async function sendEmail(){
   finally{if(btn){btn.disabled=false;btn.textContent='✉ Send Email'}}
 }
 
-function saveContact(forceStatus){
+window.saveContact = function saveContact(forceStatus){
   if(!currentDraft){toast('No contact to save','error');return}
   const status=forceStatus||document.getElementById('r-status')?.value||'new';
   const c={
@@ -524,7 +526,7 @@ function saveContact(forceStatus){
 }
 
 // ── CONTACT DETAIL ────────────────────────────────────────────────────────────
-function selContact(id){
+window.selContact = function selContact(id){
   selectedId=id;renderList();
   const c=contacts.find(x=>x.id===id);if(!c)return;
   const s=ST[c.st]||ST.sent;
@@ -561,7 +563,7 @@ function selContact(id){
   </div>`;
 }
 
-function regenerate(id){
+window.regenerate = function regenerate(id){
   const c=contacts.find(x=>x.id===id);if(!c||!c.ptxt)return;
   document.getElementById('profile-paste') ? null : showPastePanel();
   setTimeout(()=>{
@@ -570,12 +572,12 @@ function regenerate(id){
   },100);
 }
 
-function updC(id,field,val){const c=contacts.find(x=>x.id===id);if(!c)return;c[field]=val;if(field==='st'){if(!c.log)c.log=[];c.log.push({d:new Date().toISOString().slice(0,10),t:`Status → ${ST[val]?.l||val}`,s:val});renderList();updateStats()}save()}
-function delC(id){if(!confirm('Delete?'))return;contacts=contacts.filter(c=>c.id!==id);selectedId=null;document.getElementById('main').innerHTML='<div class="main-empty"><div class="ico">◈</div><p style="font-size:13px">Select a contact</p></div>';save();renderAll()}
+window.updC = function updC(id,field,val){const c=contacts.find(x=>x.id===id);if(!c)return;c[field]=val;if(field==='st'){if(!c.log)c.log=[];c.log.push({d:new Date().toISOString().slice(0,10),t:`Status → ${ST[val]?.l||val}`,s:val});renderList();updateStats()}save()}
+window.delC = function delC(id){if(!confirm('Delete?'))return;contacts=contacts.filter(c=>c.id!==id);selectedId=null;document.getElementById('main').innerHTML='<div class="main-empty"><div class="ico">◈</div><p style="font-size:13px">Select a contact</p></div>';save();renderAll()}
 
 // ── CONFIG ────────────────────────────────────────────────────────────────────
-function openConfig(){document.getElementById('cfg-c').value=localStorage.getItem('pq_claude')||'';document.getElementById('cfg-r').value=localStorage.getItem('pq_resend')||'';document.getElementById('cfg-f').value=localStorage.getItem('pq_from')||'hello@personaquanta.online';document.getElementById('cfg-mo').style.display='flex'}
-function closeCfg(){document.getElementById('cfg-mo').style.display='none'}
-function saveCfg(){localStorage.setItem('pq_claude',document.getElementById('cfg-c').value.trim());localStorage.setItem('pq_resend',document.getElementById('cfg-r').value.trim());localStorage.setItem('pq_from',document.getElementById('cfg-f').value.trim());closeCfg();toast('Saved ✓','success')}
+window.openConfig = function openConfig(){document.getElementById('cfg-c').value=localStorage.getItem('pq_claude')||'';document.getElementById('cfg-r').value=localStorage.getItem('pq_resend')||'';document.getElementById('cfg-f').value=localStorage.getItem('pq_from')||'hello@personaquanta.online';document.getElementById('cfg-mo').style.display='flex'}
+window.closeCfg = function closeCfg(){document.getElementById('cfg-mo').style.display='none'}
+window.saveCfg = function saveCfg(){localStorage.setItem('pq_claude',document.getElementById('cfg-c').value.trim());localStorage.setItem('pq_resend',document.getElementById('cfg-r').value.trim());localStorage.setItem('pq_from',document.getElementById('cfg-f').value.trim());closeCfg();toast('Saved ✓','success')}
 
-function toast(msg,type){const t=document.getE
+window.toast = function toast(msg,type){const t=document.getE
