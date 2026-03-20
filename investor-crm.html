@@ -315,6 +315,7 @@ async function analyzeProfile() {
     var txt2 = data.content[0].text.trim();
     if (txt2.startsWith('```')) txt2 = txt2.replace(/```json?|```/g, '').trim();
     var p = JSON.parse(txt2);
+    if (p.email_body) p.email_body = p.email_body + '\n\n---\nMaksym Pozhydaiev\nFounder\nPersonaQuanta + HEV\nhttps://personaquanta.github.io/personaquanta/\nhttps://www.linkedin.com/in/pozhydaiev/\npersonaquanta@proton.me';
     currentDraft = Object.assign({}, p, {profileText: txt});
     showResults(p);
   } catch(e) {
@@ -631,7 +632,7 @@ function selContact(id) {
           '</div>' +
           '<div style="margin-bottom:8px"><span style="font-size:10px;color:var(--muted2);font-family:monospace">NEXT ACTION</span><br><span style="color:var(--text)">'+p.next_action+'</span></div>' +
           '<div><span style="font-size:10px;color:var(--muted2);font-family:monospace">SUGGESTED REPLY</span>' +
-          '<div style="margin-top:6px;padding:10px;background:var(--card2);border-radius:6px;border:1px solid var(--border);color:var(--text);font-size:12px;line-height:1.6;white-space:pre-wrap" id="followup-draft">'+p.followup+'</div>' +
+          '<div style="margin-top:6px;padding:10px;background:var(--card2);border-radius:6px;border:1px solid var(--border);color:var(--text);font-size:12px;line-height:1.6;white-space:pre-wrap" id="followup-draft">'+p.followup+'\\n\\n---\\nMaksym Pozhydaiev\\nFounder\\nPersonaQuanta + HEV\\nhttps://personaquanta.github.io/personaquanta/\\nhttps://www.linkedin.com/in/pozhydaiev/\\npersonaquanta@proton.me'+'</div>' +
           '<button id="btn-copy-followup" style="margin-top:8px;padding:6px 12px;border-radius:6px;border:1px solid rgba(42,167,255,.3);background:rgba(42,167,255,.08);color:var(--accent);font-size:11px;font-family:monospace;cursor:pointer">📋 Copy Reply</button>' +
           '<div style="margin-top:12px;border-top:1px solid var(--border);padding-top:12px">' +
           '<div style="font-size:10px;color:var(--muted2);font-family:monospace;letter-spacing:.05em;margin-bottom:6px">SEND THIS REPLY VIA EMAIL</div>' +
